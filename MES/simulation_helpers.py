@@ -8,7 +8,7 @@ or error ID. Those concrete production rules belong in fault_detection.py.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, time as datetime_time, timedelta
+from datetime import date, datetime, time as datetime_time
 from pathlib import Path
 import time
 
@@ -35,9 +35,10 @@ class LineState:
     fault_id: str = ""
     fault_message: str = ""
     fault_station: str = ""
+    active_incident_id: str = ""
 
-    # Independent simulated time for this line.
-    simulated_cycle_start: datetime | None = None
+    # Tracks whether the current product START event has already been logged.
+    product_start_logged: bool = False
 
     # Real-time throttle between products. This does not affect simulated time.
     next_real_start_monotonic: float = 0.0
@@ -73,15 +74,12 @@ def build_start_datetime(
 
 def prepare_next_product(
     line: LineState,
-    simulated_cycle_seconds: int,
     real_pause_seconds: float,
 ) -> None:
-    """Reset generic per-product state and advance this line's simulated time."""
+    """Reset generic per-product state without owning simulation time."""
     line.sample_index = 0
     line.product_number += 1
     line.b_screwed = False
-
-    if line.simulated_cycle_start is not None:
-        line.simulated_cycle_start += timedelta(seconds=simulated_cycle_seconds)
-
+    line.product_start_logged = False
+    line.active_incident_id = ""
     line.next_real_start_monotonic = time.monotonic() + real_pause_seconds

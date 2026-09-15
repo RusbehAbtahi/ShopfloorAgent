@@ -11,19 +11,23 @@ from pathlib import Path
 import pandas as pd
 
 
-BASE_DIR = Path(__file__).resolve().parent
-NORMAL_CYCLE_CSV = BASE_DIR / "normal_cycle_90s.csv"
+GENERATOR_DIR = Path(__file__).resolve().parent
+MES_DIR = GENERATOR_DIR.parent
+NORMAL_CYCLE_CSV = MES_DIR / "normal_cycle_90s.csv"
 
-FAULT_SCREW_EARLY_TORQUE_CSV = BASE_DIR / "fault_screw_early_torque.csv"
-FAULT_ST1_ALIGNMENT_CSV = BASE_DIR / "fault_station1_alignment.csv"
-FAULT_SCREW_NO_ENGAGEMENT_CSV = BASE_DIR / "fault_screw_no_engagement.csv"
-FAULT_ST2_NO_EXIT_CSV = BASE_DIR / "fault_station2_no_exit.csv"
-FAULT_ST3_FINAL_INSPECTION_CSV = BASE_DIR / "fault_station3_final_inspection.csv"
+FAULT_SCREW_EARLY_TORQUE_CSV = MES_DIR / "fault_screw_early_torque.csv"
+FAULT_ST1_ALIGNMENT_CSV = MES_DIR / "fault_station1_alignment.csv"
+FAULT_SCREW_NO_ENGAGEMENT_CSV = MES_DIR / "fault_screw_no_engagement.csv"
+FAULT_ST2_NO_EXIT_CSV = MES_DIR / "fault_station2_no_exit.csv"
+FAULT_ST3_FINAL_INSPECTION_CSV = MES_DIR / "fault_station3_final_inspection.csv"
 
 TARGET_TORQUE_NM = 12.0
 
-# Fault 1: screw becomes mechanically stuck before the required rotation.
-EARLY_TORQUE_FAULT_START_S = 36.0
+# Fault 1: screw becomes mechanically stuck after 900 degrees of rotation.
+# The angle then remains at 900 degrees while torque rises to the target.
+# Starting the fault exactly when the golden cycle reaches 900 degrees keeps
+# accumulated rotation physically monotonic (it never jumps backwards).
+EARLY_TORQUE_FAULT_START_S = 35.5
 EARLY_TORQUE_FAULT_ANGLE_DEG = 900.0
 
 # Fault 2: Station 1 alignment is not confirmed at the 11.5 s checkpoint.

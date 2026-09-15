@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "errors": {
+    "S1_ALIGNMENT_FAILED": {
+      "station": "Station 1 — Positioning / Alignment",
+      "meaning": "One or more positioning sensors did not confirm correct seating/alignment of the two parts.",
+      "likely_causes": [
+        "Part A or Part B not correctly seated",
+        "Misaligned fixture or positioning mechanism",
+        "Contamination or mechanical obstruction",
+        "Position/alignment sensor not triggered correctly"
+      ],
+      "recommended_actions": [
+        "Inspect both parts and verify correct seating.",
+        "Check the positioning fixture for obstruction or misalignment.",
+        "Check the three Station 1 positioning/alignment sensors.",
+        "Reposition the assembly and repeat the positioning operation.",
+        "If the fault repeats, inspect fixture and sensor alignment."
+      ],
+      "repair_confirmation": "All required Station 1 sensors must report OK before production continues."
+    },
+    "S2_EARLY_TARGET_TORQUE": {
+      "station": "Station 2 — Screw Fastening",
+      "meaning": "Target torque was reached before the required screw rotation was completed.",
+      "likely_causes": [
+        "Screw blocked or cross-threaded",
+        "Thread contamination or damaged thread",
+        "Wrong screw or component geometry",
+        "Fastening tool mechanically obstructed",
+        "Assembly incorrectly positioned"
+      ],
+      "recommended_actions": [
+        "Inspect the screw and thread for blockage or cross-threading.",
+        "Remove and inspect the screw.",
+        "Check the assembly position in the fastening fixture.",
+        "Inspect the fastening tool and bit.",
+        "Replace damaged screw/component if necessary.",
+        "Repeat the fastening operation and verify normal torque-angle behavior."
+      ],
+      "repair_confirmation": "Required rotation must be completed before target torque is reached."
+    },
+    "S2_NO_SCREW_ENGAGEMENT": {
+      "station": "Station 2 — Screw Fastening",
+      "meaning": "Screw engagement was not confirmed. Rotation occurred without the expected torque build-up or screw presence.",
+      "likely_causes": [
+        "Screw missing",
+        "Screw feeder failed to deliver a screw",
+        "Screwdriver rotating without engaging the screw",
+        "Screw not correctly positioned",
+        "Damaged screw head or tool bit"
+      ],
+      "recommended_actions": [
+        "Verify that a screw is present.",
+        "Inspect the screw feeder and delivery path.",
+        "Check screw positioning below the fastening tool.",
+        "Inspect the screwdriver bit for wear or damage.",
+        "Insert/replace the screw if required.",
+        "Repeat fastening and verify torque-angle behavior."
+      ],
+      "repair_confirmation": "Screw presence must be confirmed and the required torque-angle condition must be reached."
+    },
+    "S2_PRODUCT_STUCK_NO_EXIT": {
+      "station": "Station 2 — Product Transport",
+      "meaning": "The assembly did not reach the expected Station 2 exit sensor.",
+      "likely_causes": [
+        "Product physically blocked in Station 2",
+        "Conveyor or transport mechanism stopped",
+        "Fixture did not release the assembly",
+        "Exit sensor obstructed or malfunctioning",
+        "Mechanical interference around the product"
+      ],
+      "recommended_actions": [
+        "Inspect Station 2 for a physically blocked assembly.",
+        "Check conveyor/transport movement.",
+        "Verify that the fastening fixture released the product.",
+        "Inspect the Station 2 exit sensor.",
+        "Remove any obstruction.",
+        "Manually verify that the transport path is clear before restarting."
+      ],
+      "repair_confirmation": "The assembly must leave Station 2 and trigger the expected exit signal."
+    },
+    "S3_FINAL_INSPECTION_FAILED": {
+      "station": "Station 3 — Final Inspection",
+      "meaning": "At least one final inspection check returned NOK.",
+      "likely_causes": [
+        "Assembly not correctly positioned",
+        "Part missing or incorrectly assembled",
+        "Fastening result outside expected condition",
+        "Inspection sensor not detecting correctly",
+        "Product defect from an earlier station"
+      ],
+      "recommended_actions": [
+        "Identify which final inspection check is NOK.",
+        "Inspect the corresponding product feature.",
+        "Verify part presence and assembly position.",
+        "Verify the fastening result if relevant.",
+        "Inspect the affected inspection sensor.",
+        "Correct the product or sensor condition and repeat final inspection."
+      ],
+      "repair_confirmation": "All six final inspection checks must report OK before the product is accepted."
+    }
+  }
+}
