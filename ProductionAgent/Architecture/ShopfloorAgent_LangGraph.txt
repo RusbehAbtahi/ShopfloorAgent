@@ -1,0 +1,245 @@
+@startuml ShopfloorAgent_LangGraph
+
+top to bottom direction
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam nodesep 35
+skinparam ranksep 55
+skinparam defaultTextAlignment center
+hide empty members
+
+title ShopfloorAgent - LangGraph Functional Architecture
+
+
+' ============================================================
+' LANGGRAPH STATE
+' ============================================================
+
+package "LangGraph State" as STATE {
+
+    class AgentState {
+        + phase
+        + current_request
+        + recent_history
+        + current_tool
+        + current_tool_arguments
+        + current_tool_result
+        + response_payload
+        + tool_history
+        + open_incidents
+        + selected_incident_ids
+        + selected_line_ids
+        + selected_error_ids
+        + selected_date_range
+        + clarification_attempts
+        + pending_interaction
+    }
+
+    class PhaseValues {
+        RESET
+        WAITING_FOR_INPUT
+        INPUT_RECEIVED
+        TOOL_SELECTED
+        TOOL_READY
+        TOOL_DONE
+        FINISHED
+        FAILED
+    }
+
+    class PendingInteractionValues {
+        NONE
+        SELECTOR_CLARIFICATION
+        ARGUMENT_CLARIFICATION
+        REPAIR_PRESENTATION
+    }
+
+    AgentState --> PhaseValues : phase
+    AgentState --> PendingInteractionValues : pending_interaction
+}
+
+
+' ============================================================
+' GUI / API
+' ============================================================
+
+package "GUI and API Boundary" as BOUNDARY {
+
+    class GUI {
+        + user message
+        + assistant message
+    }
+
+    class API {
+        + invoke graph
+        + return response
+    }
+}
+
+
+' ============================================================
+' LANGGRAPH NODES
+' ============================================================
+
+package "LangGraph Nodes" as GRAPH {
+
+    class REQUEST {
+        + read user text
+        + set current_request
+        + inspect pending_interaction
+        + determine re-entry path
+    }
+
+    class SELECTOR {
+        + LLM tool selection
+        + select exactly one MCP tool
+        + set current_tool
+        + phase = TOOL_SELECTED
+    }
+
+    class ARGUMENT_RESOLVER {
+        + resolve tool arguments
+        + reuse conversational context
+        + validate arguments
+        + write current_tool_arguments
+        + phase = TOOL_READY
+    }
+
+    class EXECUTION {
+        + execute current_tool
+        + use current_tool_arguments
+        + write current_tool_result
+        + append tool_history
+        + phase = TOOL_DONE
+    }
+
+    class POST_PROCESSING {
+        + read current_tool_result
+        + deterministic interpretation
+        + optional LLM summary
+        + write response_payload
+    }
+
+    class RESPONSE {
+        + read response_payload
+        + select JSON template when required
+        + render final text
+        + return through API
+    }
+
+
+    ' --------------------------------------------------------
+    ' FORCE THE DESIRED U-SHAPED LAYOUT
+    ' --------------------------------------------------------
+
+    REQUEST -[hidden]down-> SELECTOR
+    SELECTOR -[hidden]down-> ARGUMENT_RESOLVER
+
+    ARGUMENT_RESOLVER -[hidden]right-> EXECUTION
+
+    EXECUTION -[hidden]up-> POST_PROCESSING
+    POST_PROCESSING -[hidden]up-> RESPONSE
+}
+
+
+' ============================================================
+' MCP TOOLS
+' ============================================================
+
+package "Seven MCP Tools" as MCP {
+
+    class MCPTools {
+        get_status
+        get_incident_details
+        get_production_statistics
+        list_prior_incidents
+        get_resolution_instructions
+        get_repair_experience
+        calculate_production_impact
+    }
+}
+
+
+' ============================================================
+' POSITION EXTERNAL ELEMENTS
+' ============================================================
+
+API -[hidden]down-> REQUEST
+API -[hidden]right-> RESPONSE
+
+AgentState -[hidden]right-> REQUEST
+EXECUTION -[hidden]right-> MCPTools
+
+
+' ============================================================
+' GUI / API FLOW
+' ============================================================
+
+GUI --> API : Send
+
+API --> REQUEST : external request
+
+RESPONSE --> API : final response
+
+API --> GUI : display
+
+
+' ============================================================
+' MAIN LANGGRAPH FLOW
+' ============================================================
+
+REQUEST -down-> SELECTOR : new request
+
+SELECTOR -down-> ARGUMENT_RESOLVER : tool selected
+
+ARGUMENT_RESOLVER -right-> EXECUTION : arguments complete\nand valid
+
+EXECUTION -up-> POST_PROCESSING : raw result stored
+
+POST_PROCESSING -up-> RESPONSE : response_payload ready
+
+
+' ============================================================
+' MCP EXECUTION
+' ============================================================
+
+EXECUTION -right-> MCPTools : execute current_tool
+
+
+' ============================================================
+' SELECTOR CLARIFICATION LOOP
+' ============================================================
+
+SELECTOR -right-> RESPONSE : tool cannot be selected
+
+RESPONSE -left-> REQUEST : next user message
+
+REQUEST -down-> SELECTOR : pending =\nSELECTOR_CLARIFICATION
+
+
+' ============================================================
+' ARGUMENT CLARIFICATION LOOP
+' ============================================================
+
+ARGUMENT_RESOLVER --> RESPONSE : required argument missing
+
+REQUEST --> ARGUMENT_RESOLVER : pending =\nARGUMENT_CLARIFICATION
+
+
+' ============================================================
+' REPAIR EXPERIENCE PRESENTATION LOOP
+' ============================================================
+
+POST_PROCESSING --> RESPONSE : more than 3 experiences
+
+REQUEST --> POST_PROCESSING : pending =\nREPAIR_PRESENTATION
+
+
+' ============================================================
+' FRESH REPLACEMENT REQUEST
+' ============================================================
+
+REQUEST --> SELECTOR : pending = NONE\nor new replacement request
+
+
+@enduml
