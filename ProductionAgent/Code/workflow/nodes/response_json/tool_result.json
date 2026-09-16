@@ -1,0 +1,5 @@
+{
+  "success": {
+    "markdown": "### `{tool_name}` result\n\n{result}"
+  }
+}

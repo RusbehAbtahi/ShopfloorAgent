@@ -1,0 +1,9 @@
+{
+  "tool_description": [
+    "Return the immediate current Shopfloor MES condition. If incidents are currently OPEN, return their deterministic incident details; otherwise return the fixed previous-one-hour production health summary for all four lines."
+  ],
+  "server_instruction": [
+    "Use get_status for requests about what is happening now, current line condition, current faults, or currently open incidents. The tool accepts no arguments. Do not use it as a historical incident search or as a substitute for detailed production statistics over a user-selected period."
+  ],
+  "field_descriptions": {}
+}

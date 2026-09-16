@@ -1,0 +1,8 @@
+{
+  "clarification": {
+    "markdown": "### More information is required\n\nThe selected tool is **`{tool_name}`**, but its arguments are not ready. This is **attempt {attempt}**.\n\n#### What needs attention\n\n{issues}\n\n#### Expected input\n\n{argument_help}"
+  },
+  "reset": {
+    "markdown": "### Argument resolution reset\n\nThe arguments for **`{tool_name}`** could not be validated after **{attempt} failed attempts**, so the current ProductionAgent state has been reset.\n\n#### Last validation issue\n\n{issues}\n\n#### Expected input\n\n{argument_help}\n\nStart a new request. If this keeps happening, contact the developer."
+  }
+}

@@ -1,0 +1,11 @@
+# ShopfloorAgent server-side runtime dependencies.
+# ProductionAgent runs separately on the laptop and is intentionally excluded.
+
+numpy==1.26.4
+pandas>=2.2
+scipy>=1.13
+streamlit>=1.34
+websockets>=12
+mcp>=1.27,<2
+uvicorn>=0.30
+anyio>=4.4

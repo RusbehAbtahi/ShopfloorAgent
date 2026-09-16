@@ -1,0 +1,25 @@
+services:
+  mes:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: shopfloor-agent:local
+    container_name: shopfloor-mes
+    restart: unless-stopped
+    command: ["mes"]
+    ports:
+      - "127.0.0.1:8502:8501"
+    volumes:
+      - ./MES/data:/app/MES/data
+
+  mcp:
+    image: shopfloor-agent:local
+    container_name: shopfloor-mcp
+    restart: unless-stopped
+    command: ["mcp"]
+    depends_on:
+      - mes
+    ports:
+      - "127.0.0.1:8001:8001"
+    volumes:
+      - ./MES/data:/app/MES/data:ro

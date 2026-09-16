@@ -24,9 +24,37 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
+from mcp_tool_instructions import load_mcp_tool_instructions
+
 
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[1] / "MES" / "data"
 VALID_LINE_IDS = frozenset({1, 2, 3, 4})
+
+
+TOOL_NAME = 'list_prior_incidents'
+TOOL_TITLE = 'Shopfloor Prior Incidents'
+_INSTRUCTIONS = load_mcp_tool_instructions('custom_list_prior_incidents.json')
+TOOL_DESCRIPTION = _INSTRUCTIONS.tool_description
+SERVER_INSTRUCTIONS = _INSTRUCTIONS.server_instruction
+
+INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "date_from": {"type": "string", "minLength": 1, "description": _INSTRUCTIONS.field_descriptions["date_from"]},
+        "date_to": {"type": "string", "minLength": 1, "description": _INSTRUCTIONS.field_descriptions["date_to"]},
+        "line_ids": {"type": "array", "items": {"type": "integer", "enum": [1, 2, 3, 4]}, "maxItems": 4, "uniqueItems": True, "description": _INSTRUCTIONS.field_descriptions["line_ids"]},
+        "station_ids": {"type": "array", "items": {"type": "string", "enum": ["Station 1", "Station 2", "Station 3"]}, "maxItems": 3, "uniqueItems": True, "description": _INSTRUCTIONS.field_descriptions["station_ids"]},
+        "error_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": True, "description": _INSTRUCTIONS.field_descriptions["error_ids"]},
+    },
+    "additionalProperties": False,
+}
+
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {"incidents": {"type": "array", "items": {"type": "object"}}},
+    "required": ["incidents"],
+    "additionalProperties": False,
+}
 
 
 class ListPriorIncidentsTool:
@@ -185,3 +213,20 @@ def _client_status(mes_status: str) -> str:
     if mes_status == "REPAIRED":
         return "CLOSED"
     raise ValueError(f"Unsupported MES incident status: {mes_status}")
+
+
+def tool_metadata() -> dict[str, Any]:
+    """Build the read-only MCP descriptor for this Shopfloor tool."""
+    return {
+        "name": TOOL_NAME,
+        "title": TOOL_TITLE,
+        "description": TOOL_DESCRIPTION,
+        "inputSchema": INPUT_SCHEMA,
+        "outputSchema": OUTPUT_SCHEMA,
+        "annotations": {
+            "destructiveHint": False,
+            "readOnlyHint": True,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    }

@@ -18,10 +18,11 @@ class GetStatusToolTests(ShopfloorToolTestCase):
             ["INC-000005", "INC-000002"],
         )
         self.assertEqual(
-            result["incidents"][0]["measurements"]["torque_nm"],
-            12.0,
+            result["incidents"][0]["error_id"],
+            "S2_EARLY_TARGET_TORQUE",
         )
-        self.assertIsNotNone(result["incidents"][1]["snapshot"])
+        self.assertTrue(all("snapshot" not in item for item in result["incidents"]))
+        self.assertTrue(all("measurements" not in item for item in result["incidents"]))
 
     def test_healthy_status_reports_fixed_last_hour_for_all_four_lines(self) -> None:
         self.close_open_incidents()

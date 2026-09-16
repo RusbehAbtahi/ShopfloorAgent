@@ -1,0 +1,11 @@
+{
+  "tool_description": [
+    "Return deterministic official troubleshooting and repair guidance from the Shopfloor MES error notebook for one or more error IDs."
+  ],
+  "server_instruction": [
+    "Use get_resolution_instructions when the user asks for official, predefined, or operator resolution guidance. error_ids is optional: when omitted, the tool uses the distinct error types of currently OPEN incidents and may validly return an empty result when none exist. Do not confuse official guidance with historical repair experience."
+  ],
+  "field_descriptions": {
+    "error_ids": "Optional list of known MES error IDs whose official resolution instructions should be returned."
+  }
+}

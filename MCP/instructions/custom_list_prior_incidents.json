@@ -1,0 +1,15 @@
+{
+  "tool_description": [
+    "Search deterministic MES incident history and return matching incidents newest first. Filters may restrict time, production line, station, or error type."
+  ],
+  "server_instruction": [
+    "Use list_prior_incidents to search or review previously recorded incidents. date_from, date_to, line_ids, station_ids, and error_ids are optional filters. Omitted filters mean no restriction for that dimension, so do not require clarification merely because a filter was omitted. A calendar-day request means the complete day from 00:00:00 to the following midnight."
+  ],
+  "field_descriptions": {
+    "date_from": "Optional inclusive timezone-naive ISO-8601 lower bound for incident occurrence time.",
+    "date_to": "Optional timezone-naive ISO-8601 upper bound for incident occurrence time.",
+    "line_ids": "Optional production line filter using line IDs 1 through 4.",
+    "station_ids": "Optional station filter using Station 1, Station 2, or Station 3.",
+    "error_ids": "Optional filter containing one or more known MES error IDs."
+  }
+}

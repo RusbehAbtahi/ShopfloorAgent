@@ -1,0 +1,21 @@
+# VCS / IDE
+.git
+.idea
+
+# Python caches
+**/__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# The laptop-side client is not part of the AWS server image.
+ProductionAgent/
+
+# Tests and local-only analysis artifacts are not runtime dependencies.
+MCP/unit_tests/
+MES/Analytics/
+
+# Mutable MES history belongs on the persistent host mount, not in the image.
+# Keep only the static repair notebook as seed data.
+MES/data/*
+!MES/data/error_notebook.json

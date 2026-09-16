@@ -1,0 +1,14 @@
+{
+  "tool_description": [
+    "Return raw historical repair experience for exactly one MES error type, optionally restricted by time and production line."
+  ],
+  "server_instruction": [
+    "Use get_repair_experience when the user asks how a known error was repaired in previous incidents. error_id is required and represents exactly one error type. date_from, date_to, and line_ids are optional; omission means all available repair history or all lines for that dimension. There is no station filter. The MCP tool returns raw repair records and does not summarize them."
+  ],
+  "field_descriptions": {
+    "error_id": "Required single known MES error ID whose historical repair experience should be retrieved.",
+    "date_from": "Optional inclusive timezone-naive ISO-8601 lower bound for repaired incident occurrence time.",
+    "date_to": "Optional timezone-naive ISO-8601 upper bound for repaired incident occurrence time.",
+    "line_ids": "Optional production line filter using line IDs 1 through 4."
+  }
+}

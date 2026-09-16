@@ -1,0 +1,13 @@
+.idea/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+.env.*
+MES/data/logs/
+MES/data/*.sqlite*
+MES/data/runtime_state.json
+MES/data/incident_snapshots/
+MES/data/history_backups/
+ProductionAgent/data/log/
+MES/Analytics/output/

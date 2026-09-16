@@ -1,0 +1,14 @@
+{
+  "tool_description": [
+    "Calculate deterministic projected production, missed production, downtime, and loss percentage attributable to one or more specific production incidents over selected lines and a concrete time interval."
+  ],
+  "server_instruction": [
+    "Use calculate_production_impact only for production loss or impact attributable to specific incident IDs. incident_ids, date_from, date_to, and line_ids are required for the MCP call. Do not substitute an error ID for incident_ids and do not invent incident IDs. When the user asks for the incident day or impact day, resolve the authoritative incident occurrence date and use the complete calendar day from 00:00:00 to the following midnight."
+  ],
+  "field_descriptions": {
+    "incident_ids": "Required non-empty list of exact production incident IDs whose downtime is included in the impact calculation.",
+    "date_from": "Required timezone-naive ISO-8601 start of the impact interval.",
+    "date_to": "Required timezone-naive ISO-8601 end of the impact interval. It must be later than date_from.",
+    "line_ids": "Required non-empty list of production line IDs selected from 1, 2, 3, and 4."
+  }
+}

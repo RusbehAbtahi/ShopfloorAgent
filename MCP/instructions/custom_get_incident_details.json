@@ -1,0 +1,11 @@
+{
+  "tool_description": [
+    "Return compact deterministic details for one exact production incident, including its identity, status, downtime, and its own repair information when available. Raw snapshots and measurement payloads remain backend-only and are not exposed through MCP."
+  ],
+  "server_instruction": [
+    "Use get_incident_details when the user asks for the complete information about one specific incident. incident_id is required. Preserve the exact incident identifier. The tool returns stored deterministic evidence for that incident only; do not treat it as historical repair experience from other incidents or as official resolution guidance."
+  ],
+  "field_descriptions": {
+    "incident_id": "Required exact production incident ID, for example INC-000003."
+  }
+}

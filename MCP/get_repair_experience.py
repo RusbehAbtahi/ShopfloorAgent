@@ -23,9 +23,37 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
+from mcp_tool_instructions import load_mcp_tool_instructions
+
 
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[1] / "MES" / "data"
 VALID_LINE_IDS = frozenset({1, 2, 3, 4})
+
+
+TOOL_NAME = 'get_repair_experience'
+TOOL_TITLE = 'Shopfloor Repair Experience'
+_INSTRUCTIONS = load_mcp_tool_instructions('custom_get_repair_experience.json')
+TOOL_DESCRIPTION = _INSTRUCTIONS.tool_description
+SERVER_INSTRUCTIONS = _INSTRUCTIONS.server_instruction
+
+INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "error_id": {"type": "string", "minLength": 1, "description": _INSTRUCTIONS.field_descriptions["error_id"]},
+        "date_from": {"type": "string", "minLength": 1, "description": _INSTRUCTIONS.field_descriptions["date_from"]},
+        "date_to": {"type": "string", "minLength": 1, "description": _INSTRUCTIONS.field_descriptions["date_to"]},
+        "line_ids": {"type": "array", "items": {"type": "integer", "enum": [1, 2, 3, 4]}, "maxItems": 4, "uniqueItems": True, "description": _INSTRUCTIONS.field_descriptions["line_ids"]},
+    },
+    "required": ["error_id"],
+    "additionalProperties": False,
+}
+
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {"experiences": {"type": "array", "items": {"type": "object"}}},
+    "required": ["experiences"],
+    "additionalProperties": False,
+}
 
 
 class GetRepairExperienceTool:
@@ -149,3 +177,20 @@ def _parse_mes_datetime(value: str, field_name: str) -> datetime:
 
 def _format_mes_datetime(value: datetime) -> str:
     return value.isoformat(timespec="milliseconds")
+
+
+def tool_metadata() -> dict[str, Any]:
+    """Build the read-only MCP descriptor for this Shopfloor tool."""
+    return {
+        "name": TOOL_NAME,
+        "title": TOOL_TITLE,
+        "description": TOOL_DESCRIPTION,
+        "inputSchema": INPUT_SCHEMA,
+        "outputSchema": OUTPUT_SCHEMA,
+        "annotations": {
+            "destructiveHint": False,
+            "readOnlyHint": True,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    }

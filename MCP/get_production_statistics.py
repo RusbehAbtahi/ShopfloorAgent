@@ -23,6 +23,8 @@ from pathlib import Path
 import re
 from typing import Any
 
+from mcp_tool_instructions import load_mcp_tool_instructions
+
 
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[1] / "MES" / "data"
 PRODUCTION_LOG_RELATIVE_PATH = Path("logs") / "production.log"
@@ -32,6 +34,35 @@ _EVENT_PATTERN = re.compile(
     r"^(?P<time>[^|]+)\s*\|\s*Line (?P<line>\d+)\s*\|\s*"
     r"Product (?P<product>\d+)\s*\|\s*(?P<event>START|FINISHED)\s*$"
 )
+
+
+TOOL_NAME = 'get_production_statistics'
+TOOL_TITLE = 'Shopfloor Production Statistics'
+_INSTRUCTIONS = load_mcp_tool_instructions('custom_get_production_statistics.json')
+TOOL_DESCRIPTION = _INSTRUCTIONS.tool_description
+SERVER_INSTRUCTIONS = _INSTRUCTIONS.server_instruction
+
+INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "date_from": {"type": "string", "minLength": 1, "description": _INSTRUCTIONS.field_descriptions["date_from"]},
+        "date_to": {"type": "string", "minLength": 1, "description": _INSTRUCTIONS.field_descriptions["date_to"]},
+        "line_ids": {"type": "array", "items": {"type": "integer", "enum": [1, 2, 3, 4]}, "minItems": 1, "maxItems": 4, "uniqueItems": True, "description": _INSTRUCTIONS.field_descriptions["line_ids"]},
+    },
+    "required": ["date_from", "date_to", "line_ids"],
+    "additionalProperties": False,
+}
+
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "lines": {"type": "array", "items": {"type": "object"}},
+        "total_completed_products": {"type": "integer"},
+        "total_production_rate_per_hour": {"type": "number"},
+    },
+    "required": ["lines", "total_completed_products", "total_production_rate_per_hour"],
+    "additionalProperties": False,
+}
 
 
 class GetProductionStatisticsTool:
@@ -148,3 +179,20 @@ def _parse_mes_datetime(value: str, field_name: str) -> datetime:
             f"{field_name} must be timezone-naive like the MES simulated time"
         )
     return parsed
+
+
+def tool_metadata() -> dict[str, Any]:
+    """Build the read-only MCP descriptor for this Shopfloor tool."""
+    return {
+        "name": TOOL_NAME,
+        "title": TOOL_TITLE,
+        "description": TOOL_DESCRIPTION,
+        "inputSchema": INPUT_SCHEMA,
+        "outputSchema": OUTPUT_SCHEMA,
+        "annotations": {
+            "destructiveHint": False,
+            "readOnlyHint": True,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    }

@@ -1,8 +1,8 @@
-"""Calculate deterministic production loss for one MES error type.
+"""Calculate deterministic production loss for selected MES incidents.
 
-This module attributes downtime only to incidents matching one requested error
-ID and selected production lines. Expected production uses the approved golden
-cycle of one product per 90 simulated seconds per line.
+This module attributes downtime only to the requested incident IDs and selected
+production lines. Expected production uses the approved golden cycle of one
+product per 90 simulated seconds per line.
 
 Main classes:
     CalculateProductionImpactTool:
@@ -10,11 +10,11 @@ Main classes:
 
 Main methods:
     execute():
-        Returns deterministic loss values for one error and time interval.
+        Returns deterministic loss values for selected incidents in one interval.
 
 Important notes:
     Open incidents are capped at the latest persisted MES simulated time.
-    The module performs no LLM estimation and does not attribute other causes.
+    The module performs no LLM estimation and does not select incidents itself.
 """
 
 from __future__ import annotations
@@ -25,14 +25,47 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
+from mcp_tool_instructions import load_mcp_tool_instructions
+
 
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[1] / "MES" / "data"
 VALID_LINE_IDS = frozenset({1, 2, 3, 4})
 NOMINAL_CYCLE_SECONDS = 90.0
 
 
+TOOL_NAME = 'calculate_production_impact'
+TOOL_TITLE = 'Shopfloor Production Impact'
+_INSTRUCTIONS = load_mcp_tool_instructions('custom_calculate_production_impact.json')
+TOOL_DESCRIPTION = _INSTRUCTIONS.tool_description
+SERVER_INSTRUCTIONS = _INSTRUCTIONS.server_instruction
+
+INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "incident_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": True, "description": _INSTRUCTIONS.field_descriptions["incident_ids"]},
+        "date_from": {"type": "string", "minLength": 1, "description": _INSTRUCTIONS.field_descriptions["date_from"]},
+        "date_to": {"type": "string", "minLength": 1, "description": _INSTRUCTIONS.field_descriptions["date_to"]},
+        "line_ids": {"type": "array", "items": {"type": "integer", "enum": [1, 2, 3, 4]}, "minItems": 1, "maxItems": 4, "uniqueItems": True, "description": _INSTRUCTIONS.field_descriptions["line_ids"]},
+    },
+    "required": ["incident_ids", "date_from", "date_to", "line_ids"],
+    "additionalProperties": False,
+}
+
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "lines": {"type": "array", "items": {"type": "object"}},
+        "total_projected_products": {"type": "number"},
+        "total_missed_products": {"type": "number"},
+        "total_loss_percent": {"type": "number"},
+    },
+    "required": ["lines", "total_projected_products", "total_missed_products", "total_loss_percent"],
+    "additionalProperties": False,
+}
+
+
 class CalculateProductionImpactTool:
-    """Calculate deterministic production loss attributable to one error type."""
+    """Calculate deterministic production loss for selected incident IDs."""
 
     def __init__(self, data_dir: Path | None = None) -> None:
         self.data_dir = Path(data_dir or DEFAULT_DATA_DIR)
@@ -41,16 +74,13 @@ class CalculateProductionImpactTool:
 
     def execute(
         self,
-        error_id: str,
+        incident_ids: list[str],
         date_from: str,
         date_to: str,
         line_ids: list[int],
     ) -> dict[str, Any]:
-        """Return per-line and collective impact for one selected error."""
-        normalized_error_id = str(error_id).strip()
-        if not normalized_error_id:
-            raise ValueError("error_id is required")
-
+        """Return per-line and collective impact for selected incidents."""
+        selected_incident_ids = _normalize_incident_ids(incident_ids)
         start = _parse_mes_datetime(date_from, "date_from")
         end = _parse_mes_datetime(date_to, "date_to")
         if end <= start:
@@ -58,7 +88,7 @@ class CalculateProductionImpactTool:
         selected_lines = _validate_line_ids(line_ids)
 
         rows = self._load_matching_incidents(
-            normalized_error_id,
+            selected_incident_ids,
             selected_lines,
         )
         current_simulated_time = self._load_current_simulated_time()
@@ -106,19 +136,20 @@ class CalculateProductionImpactTool:
 
     def _load_matching_incidents(
         self,
-        error_id: str,
+        incident_ids: list[str],
         line_ids: list[int],
     ) -> list[sqlite3.Row]:
         if not self.db_path.exists():
             return []
 
-        placeholders = ",".join("?" for _ in line_ids)
+        incident_placeholders = ",".join("?" for _ in incident_ids)
+        line_placeholders = ",".join("?" for _ in line_ids)
         query = (
             "SELECT occurrence_time, repair_time, status, line_id "
-            "FROM incidents WHERE error_id = ? "
-            f"AND line_id IN ({placeholders})"
+            f"FROM incidents WHERE incident_id IN ({incident_placeholders}) "
+            f"AND line_id IN ({line_placeholders})"
         )
-        parameters: list[Any] = [error_id, *line_ids]
+        parameters: list[Any] = [*incident_ids, *line_ids]
 
         uri = f"{self.db_path.resolve().as_uri()}?mode=ro"
         connection = sqlite3.connect(uri, uri=True, timeout=5)
@@ -179,6 +210,20 @@ class CalculateProductionImpactTool:
         return min(downtime, (end - start).total_seconds())
 
 
+def _normalize_incident_ids(incident_ids: list[str]) -> list[str]:
+    if not isinstance(incident_ids, list) or not incident_ids:
+        raise ValueError("incident_ids must contain at least one incident ID")
+
+    normalized: list[str] = []
+    for raw_incident_id in incident_ids:
+        if not isinstance(raw_incident_id, str) or not raw_incident_id.strip():
+            raise ValueError("incident_ids must contain only non-empty strings")
+        incident_id = raw_incident_id.strip()
+        if incident_id not in normalized:
+            normalized.append(incident_id)
+    return normalized
+
+
 def _validate_line_ids(line_ids: list[int]) -> list[int]:
     if not line_ids:
         raise ValueError("line_ids must contain at least one line")
@@ -203,3 +248,20 @@ def _parse_mes_datetime(value: str, field_name: str) -> datetime:
             f"{field_name} must be timezone-naive like the MES simulated time"
         )
     return parsed
+
+
+def tool_metadata() -> dict[str, Any]:
+    """Build the read-only MCP descriptor for this Shopfloor tool."""
+    return {
+        "name": TOOL_NAME,
+        "title": TOOL_TITLE,
+        "description": TOOL_DESCRIPTION,
+        "inputSchema": INPUT_SCHEMA,
+        "outputSchema": OUTPUT_SCHEMA,
+        "annotations": {
+            "destructiveHint": False,
+            "readOnlyHint": True,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    }

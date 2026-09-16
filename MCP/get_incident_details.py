@@ -1,20 +1,21 @@
 """Return deterministic evidence for one concrete MES incident.
 
-This module resolves one incident from SQLite, loads its stored JSON snapshot,
-and returns only persisted or directly calculable incident facts. It does not
-load repair guidance from other incidents or interpret evidence with an LLM.
+This module resolves one incident from SQLite and returns compact persisted or
+directly calculable incident facts. Raw MES snapshots and measurement payloads
+remain in the backend and are not loaded or exposed by this MCP tool.
 
 Main classes:
     GetIncidentDetailsTool:
-        Resolves one incident and its stored evidence.
+        Resolves one incident and its compact business facts.
 
 Main methods:
     execute():
-        Returns the complete deterministic incident record and snapshot.
+        Returns the compact deterministic incident record.
 
 Important notes:
     MES status REPAIRED is exposed as CLOSED. For OPEN incidents, current
     downtime is calculated from the latest persisted simulated plant time.
+    Raw snapshots and measurement payloads remain backend-only.
 """
 
 from __future__ import annotations
@@ -25,12 +26,37 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
+from mcp_tool_instructions import load_mcp_tool_instructions
+
 
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[1] / "MES" / "data"
 
 
+TOOL_NAME = 'get_incident_details'
+TOOL_TITLE = 'Shopfloor Incident Details'
+_INSTRUCTIONS = load_mcp_tool_instructions('custom_get_incident_details.json')
+TOOL_DESCRIPTION = _INSTRUCTIONS.tool_description
+SERVER_INSTRUCTIONS = _INSTRUCTIONS.server_instruction
+
+INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "incident_id": {"type": "string", "minLength": 1, "description": _INSTRUCTIONS.field_descriptions["incident_id"]},
+    },
+    "required": ["incident_id"],
+    "additionalProperties": False,
+}
+
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {"incident": {}},
+    "required": ["incident"],
+    "additionalProperties": False,
+}
+
+
 class GetIncidentDetailsTool:
-    """Resolve one MES incident and return its persisted diagnostic evidence."""
+    """Resolve one MES incident and return compact persisted business facts."""
 
     def __init__(self, data_dir: Path | None = None) -> None:
         self.data_dir = Path(data_dir or DEFAULT_DATA_DIR)
@@ -38,7 +64,7 @@ class GetIncidentDetailsTool:
         self.runtime_state_path = self.data_dir / "runtime_state.json"
 
     def execute(self, incident_id: str) -> dict[str, Any]:
-        """Return one incident with snapshot, measurements, and repair facts."""
+        """Return one incident with compact identity, status, downtime, and repair facts."""
         normalized_incident_id = str(incident_id).strip()
         if not normalized_incident_id:
             raise ValueError("incident_id is required")
@@ -47,8 +73,6 @@ class GetIncidentDetailsTool:
         if row is None:
             return {"incident": None}
 
-        measurements = self._parse_measurements(row["measurements_json"])
-        snapshot = self._load_snapshot(str(row["snapshot_path"]))
         status = _client_status(str(row["status"]))
         downtime_seconds = self._resolve_downtime(row, status)
 
@@ -62,13 +86,6 @@ class GetIncidentDetailsTool:
             "product_number": int(row["product_number"]),
             "status": status,
             "downtime_seconds": downtime_seconds,
-            "snapshot_path": str(row["snapshot_path"]),
-            "snapshot": snapshot,
-            "measurements": measurements,
-            "detector_trigger_evidence": {
-                "fault_sample_time_s": row["fault_sample_time_s"],
-                "measurements": measurements,
-            },
             "repair_time": (
                 None if row["repair_time"] is None else str(row["repair_time"])
             ),
@@ -92,8 +109,7 @@ class GetIncidentDetailsTool:
                 """
                 SELECT incident_id, error_id, error_message, station, line_id,
                        product_number, occurrence_time, repair_time,
-                       downtime_seconds, status, snapshot_path, repair_comment,
-                       measurements_json, fault_sample_time_s
+                       downtime_seconds, status, repair_comment
                 FROM incidents
                 WHERE incident_id = ?
                 """,
@@ -101,31 +117,6 @@ class GetIncidentDetailsTool:
             ).fetchone()
         finally:
             connection.close()
-
-    def _load_snapshot(self, relative_path: str) -> dict[str, Any] | None:
-        snapshot_path = self.data_dir / relative_path
-        if not snapshot_path.exists():
-            return None
-        try:
-            snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
-            raise ValueError(
-                f"Incident snapshot is invalid: {relative_path}"
-            ) from exc
-        if not isinstance(snapshot, dict):
-            raise ValueError(f"Incident snapshot is not an object: {relative_path}")
-        return snapshot
-
-    def _parse_measurements(self, value: Any) -> dict[str, Any]:
-        if value is None or value == "":
-            return {}
-        try:
-            measurements = json.loads(str(value))
-        except json.JSONDecodeError as exc:
-            raise ValueError("Incident measurements_json is invalid") from exc
-        if not isinstance(measurements, dict):
-            raise ValueError("Incident measurements_json is not an object")
-        return measurements
 
     def _resolve_downtime(
         self,
@@ -183,3 +174,20 @@ def _parse_mes_datetime(value: str, field_name: str) -> datetime:
             f"{field_name} must be timezone-naive like the MES simulated time"
         )
     return parsed
+
+
+def tool_metadata() -> dict[str, Any]:
+    """Build the read-only MCP descriptor for this Shopfloor tool."""
+    return {
+        "name": TOOL_NAME,
+        "title": TOOL_TITLE,
+        "description": TOOL_DESCRIPTION,
+        "inputSchema": INPUT_SCHEMA,
+        "outputSchema": OUTPUT_SCHEMA,
+        "annotations": {
+            "destructiveHint": False,
+            "readOnlyHint": True,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    }

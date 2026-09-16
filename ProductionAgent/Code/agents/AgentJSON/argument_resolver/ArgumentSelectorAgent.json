@@ -1,0 +1,190 @@
+{
+  "agent_meta": {
+    "agent_id": "argument_resolver",
+    "version": "ArgumentSelectorAgent",
+    "agent_type": "Selector",
+    "name": "ProductionAgent Argument Selector",
+    "description": "Selects explicitly requested line, station, and error identifiers from fixed ShopfloorAgent enums.",
+    "tags": [
+      "shopfloor",
+      "production_agent",
+      "argument_resolver",
+      "selector"
+    ],
+    "enabled": true
+  },
+  "llm_config": {
+    "provider": "openai",
+    "model_name": "gpt-5-mini",
+    "reasoning_effort": "minimal",
+    "temperature": 0.0,
+    "max_tokens": 256,
+    "response_format": "json",
+    "prompt_cache_key": "production-agent-argument-selector-v1"
+  },
+  "static_prompt": {
+    "preamble": "You are the closed-world argument selector for the ShopfloorAgent ProductionAgent. Your responsibility is deliberately narrow: extract line IDs, station IDs, and error IDs from the current user request by selecting only declared enum values. You never execute tools, never answer the user's production question, never create dates or incident IDs, and never invent identifiers.",
+    "Agent Purpose": "Read the current user request and select every line, station, and error identifier that the user explicitly states or clearly describes. The selected tool name is context only; do not use it to manufacture arguments the user did not provide.",
+    "Selection Contract": "Each field is independent. Return JSON null when the current request and allowed supplementary context contain no value for that field. When the user names several valid values, return all of them once. Semantic wording may map to a declared enum when the mapping is clear, for example fastening station to Station 2 or alignment failure to S1_ALIGNMENT_FAILED. Treat the three fields independently. Never infer station_ids from an error known station, never infer error_ids from a station alone, and never infer line_ids from either. A station is selected only when the user actually uses it as station scope. Do not infer default lines, stations, or errors from the selected tool. If Supplementary Previous-Turn Context is appended at runtime, use it only according to its current-request-first rules and only for a clear backward reference or omitted information. A value explicitly listed as a previous error, line, or station in Supplementary Previous-Turn Context is a direct prior fact, not an inferred association. When the current request clearly refers back with wording such as 'this type of error', 'that error', 'this line', or 'that station', reuse the matching direct prior fact.",
+    "Hard Rules": "1. Use only option ids declared under Decision Targets. 2. Return all clearly requested values, not only the first. 3. Deduplicate repeated values. 4. Return null for an absent field. 5. Never infer a value merely because it would be useful to the selected tool. 6. Never return dates, incident IDs, explanations, confidence scores, or extra keys. 7. Do not populate one field merely because another selected field is associated with it in the MES.",
+    "Output Contract": "Return valid JSON only with exactly these keys: line_ids, station_ids, error_ids. Each value is either JSON null or a JSON array containing declared option ids. Do not return markdown or surrounding text.",
+    "Examples": "User: Show incidents from lines 1 and 3 at the fastening station. -> {\"line_ids\":[\"1\",\"3\"],\"station_ids\":[\"Station 2\"],\"error_ids\":null}. User: Show alignment failures and final inspection failures. -> {\"line_ids\":null,\"station_ids\":null,\"error_ids\":[\"S1_ALIGNMENT_FAILED\",\"S3_FINAL_INSPECTION_FAILED\"]}. User: What happened yesterday? -> {\"line_ids\":null,\"station_ids\":null,\"error_ids\":null}."
+  },
+  "elements_order": [
+    "Agent Purpose",
+    "mcp_server_instructions",
+    "mcp_selected_tool_context",
+    "Selection Contract",
+    "Hard Rules",
+    "Output Contract",
+    "Examples",
+    "decision_targets"
+  ],
+  "dynamic_bindings": [
+    {
+      "id": "mcp_server_instructions",
+      "prompt_text": "## MCP Server Instructions",
+      "bind_from": "MCP.mcp_server_instructions",
+      "expected_type": "string",
+      "required": true,
+      "visible_in_prompt": true
+    },
+    {
+      "id": "mcp_selected_tool_context",
+      "prompt_text": "## Selected MCP Tool Contract",
+      "bind_from": "MCP.mcp_selected_tool_context",
+      "expected_type": "string",
+      "required": true,
+      "visible_in_prompt": true
+    },
+    {
+      "id": "tool_name",
+      "prompt_text": "## Selected Tool",
+      "bind_from": "ProductionAgent.current_tool",
+      "expected_type": "string",
+      "required": true,
+      "visible_in_prompt": true
+    },
+    {
+      "id": "user_request",
+      "prompt_text": "## User Request",
+      "bind_from": "ProductionAgent.current_request",
+      "expected_type": "string",
+      "required": true,
+      "visible_in_prompt": true
+    }
+  ],
+  "decision_targets": [
+    {
+      "id": "line_ids",
+      "label": "Production line IDs",
+      "type": "enum",
+      "min_selected": 1,
+      "max_selected": 4,
+      "allow_null": true,
+      "default": null,
+      "options": [
+        {
+          "id": "1",
+          "label": "Line 1",
+          "description": "Production line 1."
+        },
+        {
+          "id": "2",
+          "label": "Line 2",
+          "description": "Production line 2."
+        },
+        {
+          "id": "3",
+          "label": "Line 3",
+          "description": "Production line 3."
+        },
+        {
+          "id": "4",
+          "label": "Line 4",
+          "description": "Production line 4."
+        }
+      ]
+    },
+    {
+      "id": "station_ids",
+      "label": "Station IDs",
+      "type": "enum",
+      "min_selected": 1,
+      "max_selected": 3,
+      "allow_null": true,
+      "default": null,
+      "options": [
+        {
+          "id": "Station 1",
+          "label": "Station 1",
+          "description": "Positioning and alignment station."
+        },
+        {
+          "id": "Station 2",
+          "label": "Station 2",
+          "description": "Screw fastening and Station 2 product transport."
+        },
+        {
+          "id": "Station 3",
+          "label": "Station 3",
+          "description": "Final inspection station."
+        }
+      ]
+    },
+    {
+      "id": "error_ids",
+      "label": "MES error IDs",
+      "type": "enum",
+      "min_selected": 1,
+      "max_selected": 5,
+      "allow_null": true,
+      "default": null,
+      "options": [
+        {
+          "id": "S1_ALIGNMENT_FAILED",
+          "label": "Station 1 alignment failed",
+          "description": "Positioning or alignment was not confirmed."
+        },
+        {
+          "id": "S2_EARLY_TARGET_TORQUE",
+          "label": "Early target torque",
+          "description": "Target torque was reached before the required screw rotation."
+        },
+        {
+          "id": "S2_NO_SCREW_ENGAGEMENT",
+          "label": "No screw engagement",
+          "description": "Screw engagement was not confirmed."
+        },
+        {
+          "id": "S2_PRODUCT_STUCK_NO_EXIT",
+          "label": "Product stuck at Station 2",
+          "description": "The product did not reach the expected Station 2 exit sensor."
+        },
+        {
+          "id": "S3_FINAL_INSPECTION_FAILED",
+          "label": "Final inspection failed",
+          "description": "At least one final inspection check returned NOK."
+        }
+      ]
+    }
+  ],
+  "output_schema": {
+    "format": "json",
+    "type": "object",
+    "fields": [
+      {
+        "field_id": "line_ids",
+        "result_key": "line_ids"
+      },
+      {
+        "field_id": "station_ids",
+        "result_key": "station_ids"
+      },
+      {
+        "field_id": "error_ids",
+        "result_key": "error_ids"
+      }
+    ]
+  }
+}

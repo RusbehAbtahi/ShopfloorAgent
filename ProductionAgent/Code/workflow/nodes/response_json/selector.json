@@ -1,0 +1,8 @@
+{
+  "clarification": {
+    "markdown": "### I need a little more detail\n\nI could not determine which production operation you want. This is **attempt {attempt}**.\n\nPlease describe the operation in your own words, or choose one of the supported operations below.\n\n{tool_help}"
+  },
+  "reset": {
+    "markdown": "### Selector reset\n\nI could not determine a supported production operation after **{attempt} failed attempts**, so the current ProductionAgent state has been reset.\n\nStart a new request using one of the supported operations below.\n\n{tool_help}\n\nIf this keeps happening, contact the developer."
+  }
+}

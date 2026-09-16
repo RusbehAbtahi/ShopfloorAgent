@@ -25,6 +25,8 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
+from mcp_tool_instructions import load_mcp_tool_instructions
+
 from get_incident_details import GetIncidentDetailsTool
 from get_production_statistics import GetProductionStatisticsTool
 
@@ -32,6 +34,31 @@ from get_production_statistics import GetProductionStatisticsTool
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[1] / "MES" / "data"
 HEALTH_WINDOW = timedelta(hours=1)
 LINE_IDS = [1, 2, 3, 4]
+
+
+TOOL_NAME = 'get_status'
+TOOL_TITLE = 'Shopfloor Get Status'
+_INSTRUCTIONS = load_mcp_tool_instructions('custom_get_status.json')
+TOOL_DESCRIPTION = _INSTRUCTIONS.tool_description
+SERVER_INSTRUCTIONS = _INSTRUCTIONS.server_instruction
+
+INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": False,
+}
+
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "b_ok": {"type": "boolean"},
+        "incidents": {"type": "array", "items": {"type": "object"}},
+        "last_incident_time": {},
+        "lines": {"type": "array", "items": {"type": "object"}},
+    },
+    "required": ["b_ok"],
+    "additionalProperties": False,
+}
 
 
 class GetStatusTool:
@@ -169,3 +196,20 @@ def _parse_mes_datetime(value: str, field_name: str) -> datetime:
             f"{field_name} must be timezone-naive like the MES simulated time"
         )
     return parsed
+
+
+def tool_metadata() -> dict[str, Any]:
+    """Build the read-only MCP descriptor for this Shopfloor tool."""
+    return {
+        "name": TOOL_NAME,
+        "title": TOOL_TITLE,
+        "description": TOOL_DESCRIPTION,
+        "inputSchema": INPUT_SCHEMA,
+        "outputSchema": OUTPUT_SCHEMA,
+        "annotations": {
+            "destructiveHint": False,
+            "readOnlyHint": True,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    }

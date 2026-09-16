@@ -23,8 +23,32 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
+from mcp_tool_instructions import load_mcp_tool_instructions
+
 
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[1] / "MES" / "data"
+
+
+TOOL_NAME = 'get_resolution_instructions'
+TOOL_TITLE = 'Shopfloor Resolution Instructions'
+_INSTRUCTIONS = load_mcp_tool_instructions('custom_get_resolution_instructions.json')
+TOOL_DESCRIPTION = _INSTRUCTIONS.tool_description
+SERVER_INSTRUCTIONS = _INSTRUCTIONS.server_instruction
+
+INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "error_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": True, "description": _INSTRUCTIONS.field_descriptions["error_ids"]},
+    },
+    "additionalProperties": False,
+}
+
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {"instructions": {"type": "array", "items": {"type": "object"}}},
+    "required": ["instructions"],
+    "additionalProperties": False,
+}
 
 
 class GetResolutionInstructionsTool:
@@ -118,3 +142,20 @@ def _normalize_error_ids(error_ids: list[str]) -> list[str]:
         if error_id not in normalized:
             normalized.append(error_id)
     return normalized
+
+
+def tool_metadata() -> dict[str, Any]:
+    """Build the read-only MCP descriptor for this Shopfloor tool."""
+    return {
+        "name": TOOL_NAME,
+        "title": TOOL_TITLE,
+        "description": TOOL_DESCRIPTION,
+        "inputSchema": INPUT_SCHEMA,
+        "outputSchema": OUTPUT_SCHEMA,
+        "annotations": {
+            "destructiveHint": False,
+            "readOnlyHint": True,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    }
