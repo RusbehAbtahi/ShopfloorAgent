@@ -301,6 +301,16 @@ The latest verified automated test checkpoint is:
 
 ---
 
-## In one sentence
+## Project Summary
 
 **ShopfloorAgent demonstrates how deterministic manufacturing systems can expose production knowledge and operations to modern AI applications through a reusable MCP interface while keeping production truth outside the language model.**
+
+---
+
+## License
+
+This project is licensed under the **PolyForm Noncommercial License 1.0.0**.
+
+Required Notice: Copyright 2026 Rusbeh Abtahi
+
+See [`LICENSE`](LICENSE) for the complete license terms.
